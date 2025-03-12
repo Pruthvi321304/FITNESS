@@ -1,126 +1,167 @@
-// index.ts
+import * as readline from 'readline';
 
-interface Workout {
-    type: string; // e.g., "running", "yoga", etc.
-    duration: number; // in minutes
-    caloriesBurned: number; // calories burned during the workout
-    date: Date; // date of the workout
+type Workout = {
+  type: string;
+  duration: number; 
+  caloriesBurned: number;
+};
+
+type User = {
+  id: string;
+  name: string;
+  age: number;
+  weight: number;
+  height: number;
+  workouts: Workout[];
+};
+
+class FitnessApp {
+  private users: User[] = [];
+
+  addUser(id: string, name: string, age: number, weight: number, height: number): void {
+    const newUser: User = {
+      id,
+      name,
+      age,
+      weight,
+      height,
+      workouts: [],
+    };
+    this.users.push(newUser);
+    console.log(`User ${name} added successfully!`);
   }
-  
-  interface User {
-    id: string;
-    name: string;
-    age: number;
-    weight: number; // in kg
-    height: number; // in cm
-    workouts: Workout[];
-  }
-  
-  class FitnessTracker {
-    private users: Map<string, User>;
-  
-    constructor() {
-      this.users = new Map();
-    }
-  
-    // Add a user to the system
-    addUser(id: string, name: string, age: number, weight: number, height: number): void {
-      if (this.users.has(id)) {
-        throw new Error('User with this ID already exists.');
-      }
-      if (age <= 0 || weight <= 0 || height <= 0) {
-        throw new Error('Age, weight, and height must be positive values.');
-      }
-  
-      const user: User = { id, name, age, weight, height, workouts: [] };
-      this.users.set(id, user);
-    }
-  
-    // Log a workout for a user
-    logWorkout(userId: string, workout: Workout): void {
-      const user = this.users.get(userId);
-      if (!user) {
-        throw new Error('User not found.');
-      }
-      if (workout.duration <= 0 || workout.caloriesBurned <= 0) {
-        throw new Error('Workout duration and calories burned must be positive values.');
-      }
+
+  logWorkout(userId: string, workout: Workout): void {
+    const user = this.users.find(u => u.id === userId);
+    if (user) {
       user.workouts.push(workout);
+      console.log('Workout logged successfully!');
+    } else {
+      console.log('User not found');
     }
-  
-    // Get all workouts of a user
-    getAllWorkoutsOf(userId: string): Workout[] {
-      const user = this.users.get(userId);
-      if (!user) {
-        throw new Error('User not found.');
-      }
-      return user.workouts;
-    }
-  
-    // Get workouts filtered by type for a user
-    getAllWorkoutsByType(userId: string, type: string): Workout[] {
-      const user = this.users.get(userId);
-      if (!user) {
-        throw new Error('User not found.');
-      }
+  }
+
+  getAllWorkoutsOf(userId: string): Workout[] | undefined {
+    const user = this.users.find(u => u.id === userId);
+    return user ? user.workouts : undefined;
+  }
+
+  getAllWorkoutsByType(userId: string, type: string): Workout[] | undefined {
+    const user = this.users.find(u => u.id === userId);
+    if (user) {
       return user.workouts.filter(workout => workout.type === type);
     }
-  
-    // Get all users in the system
-    getUsers(): User[] {
-      return Array.from(this.users.values());
-    }
-  
-    // Get details of a user by ID
-    getUser(id: string): User | undefined {
-      return this.users.get(id);
-    }
-  
-    // Update user details
-    updateUser(id: string, updatedFields: Partial<Omit<User, 'id'>>): void {
-      const user = this.users.get(id);
-      if (!user) {
-        throw new Error('User not found.');
-      }
-  
-      if (updatedFields.age && updatedFields.age <= 0) {
-        throw new Error('Age must be a positive value.');
-      }
-      if (updatedFields.weight && updatedFields.weight <= 0) {
-        throw new Error('Weight must be a positive value.');
-      }
-      if (updatedFields.height && updatedFields.height <= 0) {
-        throw new Error('Height must be a positive value.');
-      }
-  
+    return undefined;
+  }
+
+  getUsers(): User[] {
+    return this.users;
+  }
+
+  getUser(id: string): User | undefined {
+    return this.users.find(u => u.id === id);
+  }
+
+  updateUser(id: string, updatedFields: Partial<Omit<User, 'id'>>): void {
+    const user = this.users.find(u => u.id === id);
+    if (user) {
       Object.assign(user, updatedFields);
+      console.log('User updated successfully!');
+    } else {
+      console.log('User not found');
     }
   }
-  
-  // Example usage:
-  
-  const tracker = new FitnessTracker();
-  
-  // Adding users
-  tracker.addUser('1', 'Alice', 30, 70, 165);
-  tracker.addUser('2', 'Bob', 25, 80, 175);
-  
-  // Logging workouts
-  tracker.logWorkout('1', { type: 'running', duration: 30, caloriesBurned: 300, date: new Date() });
-  tracker.logWorkout('1', { type: 'yoga', duration: 45, caloriesBurned: 200, date: new Date() });
-  
-  // Getting all workouts of a user
-  console.log(tracker.getAllWorkoutsOf('1'));
-  
-  // Getting all workouts of a specific type
-  console.log(tracker.getAllWorkoutsByType('1', 'running'));
-  
-  // Updating user details
-  tracker.updateUser('1', { age: 31, weight: 72 });
-  
-  // Fetching updated user
-  console.log(tracker.getUser('1'));
-  
-  // Get all users
-  console.log(tracker.getUsers());
-  
+}
+
+const app = new FitnessApp();
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
+const askQuestion = (question: string): Promise<string> => {
+  return new Promise(resolve => rl.question(question, resolve));
+};
+
+const main = async () => {
+  let running = true;
+
+  while (running) {
+    console.log(`
+      Welcome to the Fitness App!
+      1. Add User
+      2. Log Workout
+      3. Get All Workouts of a User
+      4. Get All Workouts by Type
+      5. Get All Users
+      6. Get User Details
+      7. Update User
+      8. Exit
+    `);
+
+    const choice = await askQuestion('Please choose an option (1-8): ');
+
+    switch (choice) {
+      case '1':
+        const id = await askQuestion('Enter user ID: ');
+        const name = await askQuestion('Enter user name: ');
+        const age = parseInt(await askQuestion('Enter user age: '), 10);
+        const weight = parseFloat(await askQuestion('Enter user weight (kg): '));
+        const height = parseFloat(await askQuestion('Enter user height (cm): '));
+        app.addUser(id, name, age, weight, height);
+        break;
+
+      case '2':
+        const userId = await askQuestion('Enter user ID: ');
+        const workoutType = await askQuestion('Enter workout type: ');
+        const workoutDuration = parseInt(await askQuestion('Enter workout duration (minutes): '), 10);
+        const caloriesBurned = parseInt(await askQuestion('Enter calories burned: '), 10);
+        app.logWorkout(userId, { type: workoutType, duration: workoutDuration, caloriesBurned });
+        break;
+
+      case '3':
+        const workoutsUserId = await askQuestion('Enter user ID to view all workouts: ');
+        const allWorkouts = app.getAllWorkoutsOf(workoutsUserId);
+        console.log(allWorkouts ? allWorkouts : 'No workouts found.');
+        break;
+
+      case '4':
+        const workoutsByTypeUserId = await askQuestion('Enter user ID: ');
+        const type = await askQuestion('Enter workout type (e.g., running, yoga): ');
+        const workoutsByType = app.getAllWorkoutsByType(workoutsByTypeUserId, type);
+        console.log(workoutsByType ? workoutsByType : 'No workouts of this type found.');
+        break;
+
+      case '5':
+        const users = app.getUsers();
+        console.log(users.length > 0 ? users : 'No users found.');
+        break;
+
+      case '6':
+        const userDetailsId = await askQuestion('Enter user ID: ');
+        const user = app.getUser(userDetailsId);
+        console.log(user ? user : 'User not found.');
+        break;
+
+      case '7':
+        const updateUserId = await askQuestion('Enter user ID to update: ');
+        const updatedWeight = parseFloat(await askQuestion('Enter new weight (kg): '));
+        const updatedHeight = parseFloat(await askQuestion('Enter new height (cm): '));
+        app.updateUser(updateUserId, { weight: updatedWeight, height: updatedHeight });
+        break;
+
+      case '8':
+        console.log('Exiting the app. Goodbye!');
+        running = false;
+        rl.close();
+        break;
+
+      default:
+        console.log('Invalid option. Please choose a valid option (1-8).');
+    }
+  }
+};
+
+// Start the app
+main();
